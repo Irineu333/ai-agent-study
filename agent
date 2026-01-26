@@ -1,0 +1,8 @@
+#!/usr/bin/env bash
+
+# Use this script to test from the command line.
+# Use ./gradlew installDist to generate the bin files.
+
+export JAVA_HOME=$(/usr/libexec/java_home -v 21)
+
+./build/install/ai-agent-study/bin/ai-agent-study "$@"
