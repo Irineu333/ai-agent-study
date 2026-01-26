@@ -1,5 +1,6 @@
 plugins {
     kotlin("jvm") version "2.2.20"
+    application
 }
 
 group = "com.neoutils"
@@ -10,6 +11,7 @@ repositories {
 }
 
 dependencies {
+    implementation("com.github.ajalt.clikt:clikt:5.0.2")
     testImplementation(kotlin("test"))
 }
 
@@ -18,4 +20,8 @@ tasks.test {
 }
 kotlin {
     jvmToolchain(21)
+}
+
+application {
+    mainClass.set("com.neoutils.HelloWorldKt")
 }
