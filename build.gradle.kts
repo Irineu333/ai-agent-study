@@ -1,5 +1,6 @@
 plugins {
     kotlin("jvm") version "2.2.20"
+    kotlin("plugin.serialization") version "2.2.20"
     application
 }
 
@@ -12,6 +13,19 @@ repositories {
 
 dependencies {
     implementation("com.github.ajalt.clikt:clikt:5.0.2")
+
+    // Ktor client for HTTP requests
+    implementation("io.ktor:ktor-client-core:3.0.3")
+    implementation("io.ktor:ktor-client-cio:3.0.3")
+    implementation("io.ktor:ktor-client-content-negotiation:3.0.3")
+    implementation("io.ktor:ktor-serialization-kotlinx-json:3.0.3")
+
+    // Kotlinx serialization
+    implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.7.3")
+
+    // SLF4J no-op logger (silence warnings)
+    implementation("org.slf4j:slf4j-nop:2.0.16")
+
     testImplementation(kotlin("test"))
 }
 
@@ -23,5 +37,5 @@ kotlin {
 }
 
 application {
-    mainClass.set("com.neoutils.HelloWorldKt")
+    mainClass.set("com.neoutils.MainKt")
 }
