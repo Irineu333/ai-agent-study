@@ -1,21 +1,22 @@
-package com.neoutils.agent
+package com.neoutils.agent.feature.generate.presentation
 
 import com.github.ajalt.clikt.core.CliktCommand
+import com.github.ajalt.clikt.core.requireObject
 import com.github.ajalt.clikt.core.terminal
 import com.github.ajalt.clikt.parameters.arguments.argument
-import com.github.ajalt.clikt.parameters.options.option
 import com.github.ajalt.mordant.rendering.TextColors
-import com.neoutils.agent.domain.model.ChatMessagePart
-import com.neoutils.agent.domain.repository.ChatRepository
+import com.neoutils.agent.domain.model.AgentConfig
+import com.neoutils.agent.domain.model.MessagePart
+import com.neoutils.agent.feature.generate.domain.repository.GenerateRepository
 import kotlinx.coroutines.runBlocking
 import org.koin.core.component.KoinComponent
 import org.koin.core.component.inject
 
-class ChatBot : CliktCommand(name = "chatbot"), KoinComponent {
+class Generate : CliktCommand(name = "generate"), KoinComponent {
 
-    private val repository: ChatRepository by inject()
+    private val repository: GenerateRepository by inject()
 
-    private val model by option("--model", "-m")
+    private val config by requireObject<AgentConfig>()
 
     private val prompt by argument()
 
@@ -25,15 +26,15 @@ class ChatBot : CliktCommand(name = "chatbot"), KoinComponent {
 
         repository.generate(
             prompt = prompt,
-            model = requireNotNull(model) { "model is required" },
+            model = config.model,
         ).collect { message ->
             when (message) {
-                is ChatMessagePart.Thinking -> {
+                is MessagePart.Thinking -> {
                     isThinking = true
                     terminal.print(TextColors.gray(message.content))
                 }
 
-                is ChatMessagePart.Response -> {
+                is MessagePart.Response -> {
                     if (isThinking) {
                         terminal.println("\n")
                         isThinking = false

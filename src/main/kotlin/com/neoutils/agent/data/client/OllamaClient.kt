@@ -1,7 +1,10 @@
 package com.neoutils.agent.data.client
 
-import com.neoutils.agent.data.model.Input
-import com.neoutils.agent.data.model.Output
+import com.neoutils.agent.feature.chat.data.model.ChatInput
+import com.neoutils.agent.feature.chat.data.model.ChatInputMessage
+import com.neoutils.agent.feature.chat.data.model.ChatOutput
+import com.neoutils.agent.feature.generate.data.model.GenerateInput
+import com.neoutils.agent.feature.generate.data.model.GenerateOutput
 import io.ktor.client.*
 import io.ktor.client.engine.cio.*
 import io.ktor.client.plugins.*
@@ -31,15 +34,15 @@ class OllamaClient(
     fun generate(
         prompt: String,
         model: String,
-    ): Flow<Output> = flow {
+    ): Flow<GenerateOutput> = flow {
 
-        val input = Input(
+        val input = GenerateInput(
             prompt = prompt,
             model = model,
             stream = true,
         )
 
-        val body = json.encodeToString(Input.serializer(), input)
+        val body = json.encodeToString(GenerateInput.serializer(), input)
 
         client.preparePost("$baseUrl/api/generate") {
             contentType(ContentType.Application.Json)
@@ -50,7 +53,38 @@ class OllamaClient(
             while (!channel.isClosedForRead) {
                 val line = channel.readUTF8Line()?.takeIsNotBlank() ?: break
 
-                val output = json.decodeFromString(Output.serializer(), line)
+                val output = json.decodeFromString(GenerateOutput.serializer(), line)
+
+                emit(output)
+
+                if (output.done) break
+            }
+        }
+    }
+
+    fun chat(
+        model: String,
+        messages: List<ChatInputMessage>,
+    ): Flow<ChatOutput> = flow {
+
+        val input = ChatInput(
+            model = model,
+            messages = messages,
+            stream = true,
+        )
+
+        val body = json.encodeToString(ChatInput.serializer(), input)
+
+        client.preparePost("$baseUrl/api/chat") {
+            contentType(ContentType.Application.Json)
+            setBody(body)
+        }.execute { response ->
+            val channel = response.bodyAsChannel()
+
+            while (!channel.isClosedForRead) {
+                val line = channel.readUTF8Line()?.takeIsNotBlank() ?: break
+
+                val output = json.decodeFromString(ChatOutput.serializer(), line)
 
                 emit(output)
 
@@ -61,6 +95,5 @@ class OllamaClient(
 
     fun close() = client.close()
 }
-
 
 private fun String.takeIsNotBlank() = takeIf { it.isNotBlank() }
