@@ -8,6 +8,8 @@ import com.github.ajalt.mordant.rendering.TextColors
 import com.neoutils.agent.domain.model.AgentConfig
 import com.neoutils.agent.domain.model.MessagePart
 import com.neoutils.agent.feature.generate.domain.repository.GenerateRepository
+import com.neoutils.agent.presentation.loading
+import kotlinx.coroutines.cancelAndJoin
 import kotlinx.coroutines.runBlocking
 import org.koin.core.component.KoinComponent
 import org.koin.core.component.inject
@@ -24,10 +26,14 @@ class Generate : CliktCommand(name = "generate"), KoinComponent {
 
         var isThinking = false
 
+        val job = terminal.loading()
+
         repository.generate(
             prompt = prompt,
             model = config.model,
         ).collect { message ->
+            job.cancelAndJoin()
+
             when (message) {
                 is MessagePart.Thinking -> {
                     isThinking = true

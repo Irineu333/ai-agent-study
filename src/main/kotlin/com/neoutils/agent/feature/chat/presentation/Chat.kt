@@ -10,6 +10,8 @@ import com.neoutils.agent.domain.model.MessagePart
 import com.neoutils.agent.feature.chat.domain.model.ChatMessage
 import com.neoutils.agent.feature.chat.domain.model.ChatMessage.Role
 import com.neoutils.agent.feature.chat.domain.repository.ChatRepository
+import com.neoutils.agent.presentation.loading
+import kotlinx.coroutines.cancelAndJoin
 import kotlinx.coroutines.runBlocking
 import org.koin.core.component.KoinComponent
 import org.koin.core.component.inject
@@ -35,10 +37,14 @@ class Chat : CliktCommand(name = "chat"), KoinComponent {
             var isThinking = false
             val responseBuilder = StringBuilder()
 
+            val job = terminal.loading()
+
             repository.chat(
                 messages = history,
                 model = config.model,
             ).collect { message ->
+                job.cancelAndJoin()
+
                 when (message) {
                     is MessagePart.Thinking -> {
                         isThinking = true

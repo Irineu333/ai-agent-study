@@ -1,3 +1,5 @@
+import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
+
 plugins {
     kotlin("jvm") version "2.2.20"
     kotlin("plugin.serialization") version "2.2.20"
@@ -12,6 +14,10 @@ repositories {
 }
 
 dependencies {
+    // mordant
+    implementation("com.github.ajalt.mordant:mordant-coroutines:3.0.2")
+
+    // clikt
     implementation("com.github.ajalt.clikt:clikt:5.0.2")
 
     // Ktor client for HTTP requests
@@ -41,4 +47,10 @@ kotlin {
 
 application {
     mainClass.set("com.neoutils.agent.MainKt")
+}
+
+val compileKotlin: KotlinCompile by tasks
+
+compileKotlin.compilerOptions {
+    freeCompilerArgs.set(listOf("-Xcontext-parameters"))
 }
