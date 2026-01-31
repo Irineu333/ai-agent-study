@@ -8,8 +8,11 @@ import com.github.ajalt.mordant.terminal.prompt
 import com.neoutils.agent.domain.model.AgentConfig
 import com.neoutils.agent.domain.model.MessagePart
 import com.neoutils.agent.domain.model.ToolAction
+import com.neoutils.agent.domain.model.ToolResult
+import com.neoutils.agent.feature.chat.domain.model.CallToolAction
 import com.neoutils.agent.feature.chat.domain.model.ChatMessage
 import com.neoutils.agent.feature.chat.domain.model.ChatMessage.Role
+import com.neoutils.agent.feature.chat.domain.model.ToolCallInfo
 import com.neoutils.agent.feature.chat.domain.repository.ChatRepository
 import com.neoutils.agent.presentation.loading
 import kotlinx.coroutines.cancelAndJoin
@@ -24,17 +27,76 @@ class Chat : CliktCommand(name = "chat"), KoinComponent {
 
     private val config by requireObject<AgentConfig>()
 
+    private val tools = listOf(
+        ToolAction(
+            name = "exit",
+            description = "Exit the chat program. Call this tool when the user wants to leave, quit, or exit the conversation.",
+            execute = {
+                exitProcess(1)
+            },
+        ),
+        ToolAction(
+            name = "shell",
+            description = "Execute a shell command on the user's terminal and return the output.",
+            parameters = mapOf(
+                "command" to ToolAction.ParameterInfo(
+                    type = "string",
+                    description = "The shell command to execute",
+                    required = true,
+                ),
+            ),
+            execute = { args ->
+                val command = requireNotNull(args["command"])
+
+                val process = ProcessBuilder("sh", "-c", command)
+                    .redirectErrorStream(true)
+                    .start()
+
+                val output = process.inputStream.bufferedReader().readText()
+                process.waitFor()
+                ToolResult(content = output)
+            },
+        ),
+    )
+
     override fun run() = runBlocking {
 
         val history = mutableListOf<ChatMessage>()
+        var callToolAction: CallToolAction? = null
 
         while (true) {
+            if (callToolAction != null) {
 
-            val input = terminal.prompt(prompt = "prompt") ?: break
+                val arguments = callToolAction.arguments
+                    .map { "${it.key} = ${it.value}" }
+                    .joinToString(prefix = "(", postfix = ")")
 
-            if (input.isEmpty()) continue
+                terminal.println(TextColors.blue("${callToolAction.toolAction.name}$arguments\n"))
 
-            history.add(ChatMessage(Role.User, input))
+                history.add(
+                    ChatMessage(
+                        role = Role.Assistant,
+                        toolCalls = listOf(ToolCallInfo(callToolAction.toolAction.name, callToolAction.arguments))
+                    )
+                )
+
+                val result = callToolAction.toolAction.execute(callToolAction.arguments)
+
+                history.add(
+                    ChatMessage(
+                        role = Role.Tool,
+                        content = result.content
+                    )
+                )
+
+                callToolAction = null
+            } else {
+                val input = terminal.prompt(prompt = "prompt") ?: break
+
+                if (input.isEmpty()) continue
+
+                history.add(ChatMessage(Role.User, input))
+            }
 
             var isThinking = false
             val responseBuilder = StringBuilder()
@@ -44,12 +106,7 @@ class Chat : CliktCommand(name = "chat"), KoinComponent {
             repository.chat(
                 messages = history,
                 model = config.model,
-                tools = listOf(
-                    ToolAction(
-                        name = "exit",
-                        description = "Exit the chat program. Call this tool when the user wants to leave, quit, or exit the conversation.",
-                    )
-                )
+                tools = tools,
             ).collect { message ->
                 job.cancelAndJoin()
 
@@ -70,15 +127,19 @@ class Chat : CliktCommand(name = "chat"), KoinComponent {
                     }
 
                     is MessagePart.ToolCall -> {
-                        if (message.name == "exit") {
-                            exitProcess(0)
-                        }
+                        callToolAction = CallToolAction(
+                            toolAction = tools.first { it.name == message.name },
+                            arguments = message.arguments,
+                        )
                     }
                 }
             }
 
+            if (callToolAction == null) {
+                history.add(ChatMessage(Role.Assistant, responseBuilder.toString()))
+            }
+
             terminal.println("\n")
-            history.add(ChatMessage(Role.Assistant, responseBuilder.toString()))
         }
     }
 }

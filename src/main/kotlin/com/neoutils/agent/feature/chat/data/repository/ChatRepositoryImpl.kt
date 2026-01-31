@@ -8,7 +8,6 @@ import com.neoutils.agent.feature.chat.domain.model.ChatMessage
 import com.neoutils.agent.feature.chat.domain.repository.ChatRepository
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.mapNotNull
-import kotlinx.coroutines.flow.onCompletion
 
 class ChatRepositoryImpl(
     private val client: OllamaClient
@@ -25,8 +24,17 @@ class ChatRepositoryImpl(
                     ChatMessage.Role.System -> "system"
                     ChatMessage.Role.User -> "user"
                     ChatMessage.Role.Assistant -> "assistant"
+                    ChatMessage.Role.Tool -> "tool"
                 },
                 content = msg.content,
+                toolCalls = msg.toolCalls?.map { tc ->
+                    ChatToolCall(
+                        function = ChatToolCallFunction(
+                            name = tc.name,
+                            arguments = tc.arguments,
+                        )
+                    )
+                },
             )
         }
 
