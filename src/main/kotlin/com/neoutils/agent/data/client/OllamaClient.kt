@@ -52,9 +52,9 @@ class OllamaClient(
 
                 val output = json.decodeFromString(Output.serializer(), line)
 
-                if (output.done) break
-
                 emit(output)
+
+                if (output.done) break
             }
         }
     }

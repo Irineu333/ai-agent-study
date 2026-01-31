@@ -4,7 +4,7 @@ plugins {
     application
 }
 
-group = "com.neoutils"
+group = "com.neoutils.agent"
 version = "1.0-SNAPSHOT"
 
 repositories {
@@ -26,6 +26,9 @@ dependencies {
     // SLF4J no-op logger (silence warnings)
     implementation("org.slf4j:slf4j-nop:2.0.16")
 
+    // Koin for dependency injection
+    implementation("io.insert-koin:koin-core:4.0.1")
+
     testImplementation(kotlin("test"))
 }
 
@@ -37,5 +40,5 @@ kotlin {
 }
 
 application {
-    mainClass.set("com.neoutils.MainKt")
+    mainClass.set("com.neoutils.agent.MainKt")
 }
