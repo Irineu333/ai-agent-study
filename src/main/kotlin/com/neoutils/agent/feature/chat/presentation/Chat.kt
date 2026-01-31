@@ -7,6 +7,7 @@ import com.github.ajalt.mordant.rendering.TextColors
 import com.github.ajalt.mordant.terminal.prompt
 import com.neoutils.agent.domain.model.AgentConfig
 import com.neoutils.agent.domain.model.MessagePart
+import com.neoutils.agent.domain.model.ToolAction
 import com.neoutils.agent.feature.chat.domain.model.ChatMessage
 import com.neoutils.agent.feature.chat.domain.model.ChatMessage.Role
 import com.neoutils.agent.feature.chat.domain.repository.ChatRepository
@@ -15,6 +16,7 @@ import kotlinx.coroutines.cancelAndJoin
 import kotlinx.coroutines.runBlocking
 import org.koin.core.component.KoinComponent
 import org.koin.core.component.inject
+import kotlin.system.exitProcess
 
 class Chat : CliktCommand(name = "chat"), KoinComponent {
 
@@ -42,6 +44,12 @@ class Chat : CliktCommand(name = "chat"), KoinComponent {
             repository.chat(
                 messages = history,
                 model = config.model,
+                tools = listOf(
+                    ToolAction(
+                        name = "exit",
+                        description = "Exit the chat program. Call this tool when the user wants to leave, quit, or exit the conversation.",
+                    )
+                )
             ).collect { message ->
                 job.cancelAndJoin()
 
@@ -59,6 +67,12 @@ class Chat : CliktCommand(name = "chat"), KoinComponent {
 
                         terminal.print(message.content)
                         responseBuilder.append(message.content)
+                    }
+
+                    is MessagePart.ToolCall -> {
+                        if (message.name == "exit") {
+                            exitProcess(0)
+                        }
                     }
                 }
             }

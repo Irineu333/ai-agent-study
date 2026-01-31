@@ -47,6 +47,8 @@ class Generate : CliktCommand(name = "generate"), KoinComponent {
                     }
                     terminal.print(message.content)
                 }
+
+                is MessagePart.ToolCall -> Unit
             }
         }
     }

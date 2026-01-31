@@ -3,6 +3,7 @@ package com.neoutils.agent.data.client
 import com.neoutils.agent.feature.chat.data.model.ChatInput
 import com.neoutils.agent.feature.chat.data.model.ChatInputMessage
 import com.neoutils.agent.feature.chat.data.model.ChatOutput
+import com.neoutils.agent.feature.chat.data.model.ChatTool
 import com.neoutils.agent.feature.generate.data.model.GenerateInput
 import com.neoutils.agent.feature.generate.data.model.GenerateOutput
 import io.ktor.client.*
@@ -65,12 +66,14 @@ class OllamaClient(
     fun chat(
         model: String,
         messages: List<ChatInputMessage>,
+        tools: List<ChatTool>? = null,
     ): Flow<ChatOutput> = flow {
 
         val input = ChatInput(
             model = model,
             messages = messages,
             stream = true,
+            tools = tools,
         )
 
         val body = json.encodeToString(ChatInput.serializer(), input)
