@@ -8,7 +8,9 @@ data class Output(
     @SerialName("model")
     val model: String,
     @SerialName("response")
-    val response: String,
+    val response: String = "",
     @SerialName("thinking")
-    val thinking: String,
+    val thinking: String = "",
+    @SerialName("done")
+    val done: Boolean = false,
 )

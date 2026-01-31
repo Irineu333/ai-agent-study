@@ -16,14 +16,12 @@ class ChatBot : CliktCommand(name = "chatbot") {
 
         val client = OllamaClient()
 
-        echo(
-            client.generate(
-                prompt = prompt,
-                model = requireNotNull(model) {
-                    "model is required"
-                },
-            )
-        )
+        client.generate(
+            prompt = prompt,
+            model = requireNotNull(model) { "model is required" },
+        ).collect { output ->
+            echo(output.response, trailingNewline = false)
+        }
 
         client.close()
     }
