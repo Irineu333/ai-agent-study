@@ -48,15 +48,19 @@ class OllamaClient(
             val channel = response.bodyAsChannel()
 
             while (!channel.isClosedForRead) {
-                val line = channel.readUTF8Line() ?: break
+                val line = channel.readUTF8Line()?.takeIsNotBlank() ?: break
 
                 val output = json.decodeFromString(Output.serializer(), line)
-                emit(output)
 
                 if (output.done) break
+
+                emit(output)
             }
         }
     }
 
     fun close() = client.close()
 }
+
+
+private fun String.takeIsNotBlank() = takeIf { it.isNotBlank() }
