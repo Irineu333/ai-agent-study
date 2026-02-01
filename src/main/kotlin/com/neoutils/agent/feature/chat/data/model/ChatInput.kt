@@ -2,6 +2,8 @@ package com.neoutils.agent.feature.chat.data.model
 
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.JsonPrimitive
 
 @Serializable
 data class ChatInput(
@@ -43,3 +45,9 @@ data class ChatToolProperty(
     val type: String,
     val description: String,
 )
+
+fun Map<String, Any>.toJsonObject(): JsonObject {
+    return JsonObject(
+        mapValues { (_, value) -> JsonPrimitive(value.toString()) }
+    )
+}

@@ -2,7 +2,7 @@ package com.neoutils.agent.feature.chat.data.repository
 
 import com.neoutils.agent.data.client.OllamaClient
 import com.neoutils.agent.domain.model.MessagePart
-import com.neoutils.agent.domain.model.ToolAction
+import com.neoutils.agent.domain.tool.ToolDefinition
 import com.neoutils.agent.feature.chat.data.model.*
 import com.neoutils.agent.feature.chat.domain.model.ChatMessage
 import com.neoutils.agent.feature.chat.domain.repository.ChatRepository
@@ -16,7 +16,7 @@ class ChatRepositoryImpl(
     override fun chat(
         messages: List<ChatMessage>,
         model: String,
-        tools: List<ToolAction>,
+        toolDefinitions: List<ToolDefinition>,
     ): Flow<MessagePart> {
         val inputMessages = messages.map { msg ->
             ChatInputMessage(
@@ -31,26 +31,28 @@ class ChatRepositoryImpl(
                     ChatToolCall(
                         function = ChatToolCallFunction(
                             name = tc.name,
-                            arguments = tc.arguments,
+                            arguments = tc.arguments.toJsonObject(),
                         )
                     )
                 },
             )
         }
 
-        val chatTools = tools.map { action ->
+        val chatTools = toolDefinitions.map { definition ->
             ChatTool(
                 function = ChatToolFunction(
-                    name = action.name,
-                    description = action.description,
+                    name = definition.name,
+                    description = definition.description,
                     parameters = ChatToolParameters(
-                        properties = action.parameters.mapValues { (_, info) ->
-                            ChatToolProperty(
-                                type = info.type,
-                                description = info.description,
+                        properties = definition.parameters.associate { param ->
+                            param.name to ChatToolProperty(
+                                type = param.type,
+                                description = param.description,
                             )
                         },
-                        required = action.parameters.filter { it.value.required }.keys.toList(),
+                        required = definition.parameters
+                            .filter { it.required }
+                            .map { it.name },
                     ),
                 ),
             )
@@ -59,14 +61,25 @@ class ChatRepositoryImpl(
         return client
             .chat(model, inputMessages, chatTools.ifEmpty { null })
             .mapNotNull { output ->
-                val toolCalls = output.message.toolCalls
+
+                val toolCall = output.message.toolCalls?.firstOrNull()
+
                 when {
-                    !toolCalls.isNullOrEmpty() -> {
-                        val call = toolCalls.first()
-                        MessagePart.ToolCall(call.function.name, call.function.arguments)
+                    toolCall != null -> {
+                        MessagePart.ToolCall(
+                            toolCall.function.name,
+                            toolCall.function.argumentsAsMap()
+                        )
                     }
-                    output.message.thinking.isNotEmpty() -> MessagePart.Thinking(output.message.thinking)
-                    output.message.content.isNotEmpty() -> MessagePart.Response(output.message.content)
+
+                    output.message.thinking.isNotEmpty() -> {
+                        MessagePart.Thinking(output.message.thinking)
+                    }
+
+                    output.message.content.isNotEmpty() -> {
+                        MessagePart.Response(output.message.content)
+                    }
+
                     else -> null
                 }
             }

@@ -1,11 +1,11 @@
 package com.neoutils.agent.feature.generate.presentation
 
 import com.github.ajalt.clikt.core.CliktCommand
-import com.github.ajalt.clikt.core.requireObject
 import com.github.ajalt.clikt.core.terminal
 import com.github.ajalt.clikt.parameters.arguments.argument
+import com.github.ajalt.clikt.parameters.options.option
+import com.github.ajalt.clikt.parameters.options.required
 import com.github.ajalt.mordant.rendering.TextColors
-import com.neoutils.agent.domain.model.AgentConfig
 import com.neoutils.agent.domain.model.MessagePart
 import com.neoutils.agent.feature.generate.domain.repository.GenerateRepository
 import com.neoutils.agent.presentation.loading
@@ -18,9 +18,9 @@ class Generate : CliktCommand(name = "generate"), KoinComponent {
 
     private val repository: GenerateRepository by inject()
 
-    private val config by requireObject<AgentConfig>()
-
     private val prompt by argument()
+
+    private val model by option("--model", "-m").required()
 
     override fun run() = runBlocking {
 
@@ -30,7 +30,7 @@ class Generate : CliktCommand(name = "generate"), KoinComponent {
 
         repository.generate(
             prompt = prompt,
-            model = config.model,
+            model = model,
         ).collect { message ->
             job.cancelAndJoin()
 

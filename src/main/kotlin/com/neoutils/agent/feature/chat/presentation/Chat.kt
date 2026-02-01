@@ -1,15 +1,16 @@
 package com.neoutils.agent.feature.chat.presentation
 
 import com.github.ajalt.clikt.core.CliktCommand
-import com.github.ajalt.clikt.core.requireObject
 import com.github.ajalt.clikt.core.terminal
+import com.github.ajalt.clikt.parameters.options.option
+import com.github.ajalt.clikt.parameters.options.required
 import com.github.ajalt.mordant.rendering.TextColors
+import com.github.ajalt.mordant.table.verticalLayout
 import com.github.ajalt.mordant.terminal.prompt
-import com.neoutils.agent.domain.model.AgentConfig
 import com.neoutils.agent.domain.model.MessagePart
-import com.neoutils.agent.domain.model.ToolAction
-import com.neoutils.agent.domain.model.ToolResult
-import com.neoutils.agent.feature.chat.domain.model.CallToolAction
+import com.neoutils.agent.domain.service.ToolService
+import com.neoutils.agent.domain.tool.ToolExecutionResult
+import com.neoutils.agent.feature.chat.domain.SYSTEM_PROMPT
 import com.neoutils.agent.feature.chat.domain.model.ChatMessage
 import com.neoutils.agent.feature.chat.domain.model.ChatMessage.Role
 import com.neoutils.agent.feature.chat.domain.model.ToolCallInfo
@@ -19,79 +20,65 @@ import kotlinx.coroutines.cancelAndJoin
 import kotlinx.coroutines.runBlocking
 import org.koin.core.component.KoinComponent
 import org.koin.core.component.inject
-import kotlin.system.exitProcess
 
 class Chat : CliktCommand(name = "chat"), KoinComponent {
 
     private val repository: ChatRepository by inject()
+    private val toolService: ToolService by inject()
 
-    private val config by requireObject<AgentConfig>()
-
-    private val tools = listOf(
-        ToolAction(
-            name = "exit",
-            description = "Exit the chat program. Call this tool when the user wants to leave, quit, or exit the conversation.",
-            execute = {
-                exitProcess(1)
-            },
-        ),
-        ToolAction(
-            name = "shell",
-            description = "Execute a shell command on the user's terminal and return the output.",
-            parameters = mapOf(
-                "command" to ToolAction.ParameterInfo(
-                    type = "string",
-                    description = "The shell command to execute",
-                    required = true,
-                ),
-            ),
-            execute = { args ->
-                val command = requireNotNull(args["command"])
-
-                val process = ProcessBuilder("sh", "-c", command)
-                    .redirectErrorStream(true)
-                    .start()
-
-                val output = process.inputStream.bufferedReader().readText()
-                process.waitFor()
-                ToolResult(content = output)
-            },
-        ),
-    )
+    private val model by option("--model", "-m").required()
 
     override fun run() = runBlocking {
 
-        val history = mutableListOf<ChatMessage>()
-        var callToolAction: CallToolAction? = null
+        val history = mutableListOf(ChatMessage(Role.System, SYSTEM_PROMPT))
+
+        var toolCall: MessagePart.ToolCall? = null
 
         while (true) {
-            if (callToolAction != null) {
-
-                val arguments = callToolAction.arguments
-                    .map { "${it.key} = ${it.value}" }
-                    .joinToString(prefix = "(", postfix = ")")
-
-                terminal.println(TextColors.blue("${callToolAction.toolAction.name}$arguments\n"))
+            if (toolCall != null) {
 
                 history.add(
                     ChatMessage(
                         role = Role.Assistant,
-                        toolCalls = listOf(ToolCallInfo(callToolAction.toolAction.name, callToolAction.arguments))
+                        toolCalls = listOf(ToolCallInfo(toolCall.name, toolCall.arguments))
                     )
                 )
 
-                val result = callToolAction.toolAction.execute(callToolAction.arguments)
+                val result = toolService.execute(toolCall.name, toolCall.arguments)
 
                 history.add(
                     ChatMessage(
                         role = Role.Tool,
-                        content = result.content
+                        content = result.content,
                     )
                 )
 
-                callToolAction = null
+                val contentStyle = when (result) {
+                    is ToolExecutionResult.Success -> TextColors.gray(0.4)
+                    is ToolExecutionResult.Failure -> TextColors.red
+                }
+
+                terminal.println(TextColors.blue(toolCall.toString()))
+                terminal.println(
+                    verticalLayout {
+                        result.content
+                            .trim()
+                            .lines()
+                            .forEachIndexed { index, line ->
+                                if (index == 0) {
+                                    cell(contentStyle("L $line"))
+                                } else {
+                                    cell(contentStyle("  $line"))
+                                }
+                            }
+                    }
+                )
+
+                terminal.println()
+
+                toolCall = null
             } else {
-                val input = terminal.prompt(prompt = "prompt") ?: break
+                val input = terminal.prompt(prompt = ">", promptSuffix = " ") ?: break
 
                 if (input.isEmpty()) continue
 
@@ -105,15 +92,15 @@ class Chat : CliktCommand(name = "chat"), KoinComponent {
 
             repository.chat(
                 messages = history,
-                model = config.model,
-                tools = tools,
+                model = model,
+                toolDefinitions = toolService.definitions,
             ).collect { message ->
                 job.cancelAndJoin()
 
                 when (message) {
                     is MessagePart.Thinking -> {
                         isThinking = true
-                        terminal.print(TextColors.gray(message.content))
+                        terminal.print(TextColors.gray(0.6)(message.content))
                     }
 
                     is MessagePart.Response -> {
@@ -127,15 +114,12 @@ class Chat : CliktCommand(name = "chat"), KoinComponent {
                     }
 
                     is MessagePart.ToolCall -> {
-                        callToolAction = CallToolAction(
-                            toolAction = tools.first { it.name == message.name },
-                            arguments = message.arguments,
-                        )
+                        toolCall = message
                     }
                 }
             }
 
-            if (callToolAction == null) {
+            if (responseBuilder.isNotEmpty()) {
                 history.add(ChatMessage(Role.Assistant, responseBuilder.toString()))
             }
 

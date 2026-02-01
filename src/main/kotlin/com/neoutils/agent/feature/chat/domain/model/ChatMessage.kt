@@ -8,4 +8,7 @@ data class ChatMessage(
     enum class Role { System, User, Assistant, Tool }
 }
 
-data class ToolCallInfo(val name: String, val arguments: Map<String, String>)
+data class ToolCallInfo(
+    val name: String,
+    val arguments: Map<String, Any>
+)
