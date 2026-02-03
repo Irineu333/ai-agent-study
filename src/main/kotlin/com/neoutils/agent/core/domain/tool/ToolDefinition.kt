@@ -1,10 +1,4 @@
-package com.neoutils.agent.domain.tool
-
-data class ToolDefinition(
-    val name: String,
-    val description: String,
-    val parameters: List<ToolParameter>
-)
+package com.neoutils.agent.core.domain.tool
 
 data class ToolParameter(
     val name: String,
@@ -23,8 +17,12 @@ sealed class ToolExecutionResult(open val content: String) {
     ) : ToolExecutionResult(content)
 }
 
-abstract class Tool(val definition: ToolDefinition) {
-    abstract suspend fun execute(
+abstract class ToolDefinition(
+    val name: String,
+    val description: String,
+    val parameters: List<ToolParameter>
+) {
+    abstract fun resolve(
         arguments: Map<String, Any>
-    ): ToolExecutionResult
+    ): Result<ToolExecution>
 }

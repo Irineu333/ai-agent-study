@@ -1,4 +1,4 @@
-package com.neoutils.agent.presentation
+package com.neoutils.agent.core.presentation
 
 import com.github.ajalt.mordant.animation.coroutines.animateInCoroutine
 import com.github.ajalt.mordant.terminal.Terminal

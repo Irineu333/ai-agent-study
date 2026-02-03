@@ -1,4 +1,4 @@
-package com.neoutils.agent.data.client
+package com.neoutils.agent.core.data.client
 
 import com.neoutils.agent.feature.chat.data.model.ChatInput
 import com.neoutils.agent.feature.chat.data.model.ChatInputMessage

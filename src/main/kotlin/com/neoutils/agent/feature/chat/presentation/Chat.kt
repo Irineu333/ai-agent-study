@@ -7,15 +7,14 @@ import com.github.ajalt.clikt.parameters.options.required
 import com.github.ajalt.mordant.rendering.TextColors
 import com.github.ajalt.mordant.table.verticalLayout
 import com.github.ajalt.mordant.terminal.prompt
-import com.neoutils.agent.domain.model.MessagePart
-import com.neoutils.agent.domain.service.ToolService
-import com.neoutils.agent.domain.tool.ToolExecutionResult
+import com.neoutils.agent.core.domain.model.MessagePart
+import com.neoutils.agent.core.domain.service.ToolService
+import com.neoutils.agent.core.presentation.loading
 import com.neoutils.agent.feature.chat.domain.SYSTEM_PROMPT
 import com.neoutils.agent.feature.chat.domain.model.ChatMessage
 import com.neoutils.agent.feature.chat.domain.model.ChatMessage.Role
 import com.neoutils.agent.feature.chat.domain.model.ToolCallInfo
 import com.neoutils.agent.feature.chat.domain.repository.ChatRepository
-import com.neoutils.agent.presentation.loading
 import kotlinx.coroutines.cancelAndJoin
 import kotlinx.coroutines.runBlocking
 import org.koin.core.component.KoinComponent
@@ -44,24 +43,45 @@ class Chat : CliktCommand(name = "chat"), KoinComponent {
                     )
                 )
 
-                val result = toolService.execute(toolCall.name, toolCall.arguments)
+                val result = toolService.resolve(
+                    toolCall.name,
+                    toolCall.arguments
+                ).onSuccess { tool ->
+                    terminal.println(TextColors.blue(tool.toString()))
+                }.onFailure {
+                    terminal.println(TextColors.blue(toolCall.toString()))
+                }.flatMap { tool ->
+                    tool()
+                }
+
+                val content = result.fold(
+                    onSuccess = {
+                        it
+                    },
+                    onFailure = {
+                        it.message.orEmpty()
+                    }
+                )
 
                 history.add(
                     ChatMessage(
                         role = Role.Tool,
-                        content = result.content,
+                        content = content,
                     )
                 )
 
-                val contentStyle = when (result) {
-                    is ToolExecutionResult.Success -> TextColors.gray(0.4)
-                    is ToolExecutionResult.Failure -> TextColors.red
-                }
+                val contentStyle = result.fold(
+                    onSuccess = {
+                        TextColors.gray(0.4)
+                    },
+                    onFailure = {
+                        TextColors.red
+                    }
+                )
 
-                terminal.println(TextColors.blue(toolCall.toString()))
                 terminal.println(
                     verticalLayout {
-                        result.content
+                        content
                             .trim()
                             .lines()
                             .forEachIndexed { index, line ->
@@ -73,9 +93,6 @@ class Chat : CliktCommand(name = "chat"), KoinComponent {
                             }
                     }
                 )
-
-                terminal.println()
-
                 toolCall = null
             } else {
                 val input = terminal.prompt(prompt = ">", promptSuffix = " ") ?: break
@@ -86,6 +103,7 @@ class Chat : CliktCommand(name = "chat"), KoinComponent {
             }
 
             var isThinking = false
+            val thinkingBuilder = StringBuilder()
             val responseBuilder = StringBuilder()
 
             val job = terminal.loading()
@@ -99,8 +117,12 @@ class Chat : CliktCommand(name = "chat"), KoinComponent {
 
                 when (message) {
                     is MessagePart.Thinking -> {
-                        isThinking = true
+                        if (!isThinking) {
+                            terminal.println()
+                            isThinking = true
+                        }
                         terminal.print(TextColors.gray(0.6)(message.content))
+                        thinkingBuilder.append(message.content)
                     }
 
                     is MessagePart.Response -> {
@@ -115,6 +137,7 @@ class Chat : CliktCommand(name = "chat"), KoinComponent {
 
                     is MessagePart.ToolCall -> {
                         toolCall = message
+                        terminal.println()
                     }
                 }
             }
@@ -123,7 +146,18 @@ class Chat : CliktCommand(name = "chat"), KoinComponent {
                 history.add(ChatMessage(Role.Assistant, responseBuilder.toString()))
             }
 
-            terminal.println("\n")
+            if (thinkingBuilder.isNotEmpty() || responseBuilder.isNotEmpty()) {
+                terminal.println()
+            }
         }
     }
+}
+
+private inline fun <T, R> Result<T>.flatMap(block: (T) -> Result<R>): Result<R> {
+    return fold(
+        onSuccess = block,
+        onFailure = {
+            Result.failure(it)
+        }
+    )
 }

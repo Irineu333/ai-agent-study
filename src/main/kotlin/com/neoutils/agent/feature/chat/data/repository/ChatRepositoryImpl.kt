@@ -1,8 +1,8 @@
 package com.neoutils.agent.feature.chat.data.repository
 
-import com.neoutils.agent.data.client.OllamaClient
-import com.neoutils.agent.domain.model.MessagePart
-import com.neoutils.agent.domain.tool.ToolDefinition
+import com.neoutils.agent.core.data.client.OllamaClient
+import com.neoutils.agent.core.domain.model.MessagePart
+import com.neoutils.agent.core.domain.tool.ToolDefinition
 import com.neoutils.agent.feature.chat.data.model.*
 import com.neoutils.agent.feature.chat.domain.model.ChatMessage
 import com.neoutils.agent.feature.chat.domain.repository.ChatRepository

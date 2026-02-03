@@ -1,7 +1,7 @@
 package com.neoutils.agent.feature.generate.data.repository
 
-import com.neoutils.agent.data.client.OllamaClient
-import com.neoutils.agent.domain.model.MessagePart
+import com.neoutils.agent.core.data.client.OllamaClient
+import com.neoutils.agent.core.domain.model.MessagePart
 import com.neoutils.agent.feature.generate.domain.repository.GenerateRepository
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.mapNotNull

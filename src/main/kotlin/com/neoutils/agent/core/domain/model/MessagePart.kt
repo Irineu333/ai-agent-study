@@ -1,4 +1,4 @@
-package com.neoutils.agent.domain.model
+package com.neoutils.agent.core.domain.model
 
 sealed class MessagePart {
     data class Thinking(val content: String) : MessagePart()

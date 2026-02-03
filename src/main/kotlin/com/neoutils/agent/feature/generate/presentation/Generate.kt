@@ -6,9 +6,9 @@ import com.github.ajalt.clikt.parameters.arguments.argument
 import com.github.ajalt.clikt.parameters.options.option
 import com.github.ajalt.clikt.parameters.options.required
 import com.github.ajalt.mordant.rendering.TextColors
-import com.neoutils.agent.domain.model.MessagePart
+import com.neoutils.agent.core.domain.model.MessagePart
+import com.neoutils.agent.core.presentation.loading
 import com.neoutils.agent.feature.generate.domain.repository.GenerateRepository
-import com.neoutils.agent.presentation.loading
 import kotlinx.coroutines.cancelAndJoin
 import kotlinx.coroutines.runBlocking
 import org.koin.core.component.KoinComponent
