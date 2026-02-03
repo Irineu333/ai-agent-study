@@ -2,7 +2,9 @@ package com.neoutils.agent.feature.chat.data.model
 
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.jsonPrimitive
 
 @Serializable
@@ -31,7 +33,11 @@ data class ChatToolCallFunction(
 ) {
     fun argumentsAsMap(): Map<String, Any> {
         return arguments.mapValues { (_, value) ->
-            value.jsonPrimitive.content
+            when (value) {
+                is JsonPrimitive -> value.content
+                is JsonArray -> value.map { it.jsonPrimitive.content }
+                is JsonObject -> value.toString()
+            }
         }
     }
 }

@@ -18,7 +18,7 @@ class ToolServiceImpl(
         val tool = map[name] ?: return ToolExecutionResult.Failure(
             content = buildString {
                 appendLine("Tool $name not found.")
-                appendLine(definitions.joinToString(prefix = "Existing: ", postfix = "."))
+                appendLine(map.keys.joinToString(prefix = "Supported: ", postfix = "."))
             },
         )
 

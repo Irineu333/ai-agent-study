@@ -3,6 +3,7 @@ package com.neoutils.agent.di
 import com.neoutils.agent.data.client.OllamaClient
 import com.neoutils.agent.domain.service.ToolService
 import com.neoutils.agent.domain.service.ToolServiceImpl
+import com.neoutils.agent.domain.tool.ListTool
 import com.neoutils.agent.domain.tool.ShellTool
 import com.neoutils.agent.feature.chat.data.repository.ChatRepositoryImpl
 import com.neoutils.agent.feature.chat.domain.repository.ChatRepository
@@ -20,6 +21,7 @@ val appModule = module {
         ToolServiceImpl(
             tools = listOf(
                 ShellTool(),
+                ListTool(),
             )
         )
     }
