@@ -1,5 +1,6 @@
 package com.neoutils.agent.core.data.service
 
+import com.neoutils.agent.core.domain.model.ToolCall
 import com.neoutils.agent.core.domain.service.ToolService
 import com.neoutils.agent.core.domain.tool.ToolDefinition
 import com.neoutils.agent.core.domain.tool.ToolExecution
@@ -10,14 +11,13 @@ class ToolServiceImpl(
     private val map = definitions.associateBy { it.name }
 
     override fun resolve(
-        name: String,
-        arguments: Map<String, Any>
+        toolCall: ToolCall,
     ): Result<ToolExecution> {
-        val tool = map[name]
+        val tool = map[toolCall.name]
 
         if (tool == null) {
             val notFoundError = buildString {
-                appendLine("Tool $name not found.")
+                appendLine("Tool ${toolCall.name} not found.")
                 appendLine(
                     map.keys.joinToString(
                         prefix = "Supported: ",
@@ -29,6 +29,6 @@ class ToolServiceImpl(
             return Result.failure(Exception(notFoundError))
         }
 
-        return tool.resolve(arguments)
+        return tool.resolve(toolCall.arguments)
     }
 }

@@ -35,6 +35,9 @@ dependencies {
     // Koin for dependency injection
     implementation("io.insert-koin:koin-core:4.0.1")
 
+    // Diff utils
+    implementation("io.github.java-diff-utils:java-diff-utils:4.12")
+
     testImplementation(kotlin("test"))
 }
 

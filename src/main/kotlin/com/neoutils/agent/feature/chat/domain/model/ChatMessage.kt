@@ -1,14 +1,11 @@
 package com.neoutils.agent.feature.chat.domain.model
 
+import com.neoutils.agent.core.domain.model.ToolCall
+
 data class ChatMessage(
     val role: Role,
     val content: String = "",
-    val toolCalls: List<ToolCallInfo>? = null,
+    val toolCalls: List<ToolCall>? = null,
 ) {
     enum class Role { System, User, Assistant, Tool }
 }
-
-data class ToolCallInfo(
-    val name: String,
-    val arguments: Map<String, Any>
-)

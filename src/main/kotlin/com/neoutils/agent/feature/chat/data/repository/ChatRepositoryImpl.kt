@@ -66,7 +66,7 @@ class ChatRepositoryImpl(
 
                 when {
                     toolCall != null -> {
-                        MessagePart.ToolCall(
+                        MessagePart.Tooling(
                             toolCall.function.name,
                             toolCall.function.argumentsAsMap()
                         )

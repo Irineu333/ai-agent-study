@@ -7,13 +7,14 @@ import com.github.ajalt.clikt.parameters.options.required
 import com.github.ajalt.mordant.rendering.TextColors
 import com.github.ajalt.mordant.table.verticalLayout
 import com.github.ajalt.mordant.terminal.prompt
+import com.neoutils.agent.core.domain.extension.flatMap
 import com.neoutils.agent.core.domain.model.MessagePart
+import com.neoutils.agent.core.domain.model.ToolCall
 import com.neoutils.agent.core.domain.service.ToolService
 import com.neoutils.agent.core.presentation.loading
 import com.neoutils.agent.feature.chat.domain.SYSTEM_PROMPT
 import com.neoutils.agent.feature.chat.domain.model.ChatMessage
 import com.neoutils.agent.feature.chat.domain.model.ChatMessage.Role
-import com.neoutils.agent.feature.chat.domain.model.ToolCallInfo
 import com.neoutils.agent.feature.chat.domain.repository.ChatRepository
 import kotlinx.coroutines.cancelAndJoin
 import kotlinx.coroutines.runBlocking
@@ -31,7 +32,7 @@ class Chat : CliktCommand(name = "chat"), KoinComponent {
 
         val history = mutableListOf(ChatMessage(Role.System, SYSTEM_PROMPT))
 
-        var toolCall: MessagePart.ToolCall? = null
+        var toolCall: ToolCall? = null
 
         while (true) {
             if (toolCall != null) {
@@ -39,25 +40,21 @@ class Chat : CliktCommand(name = "chat"), KoinComponent {
                 history.add(
                     ChatMessage(
                         role = Role.Assistant,
-                        toolCalls = listOf(ToolCallInfo(toolCall.name, toolCall.arguments))
+                        toolCalls = listOf(toolCall),
                     )
                 )
 
-                val result = toolService.resolve(
-                    toolCall.name,
-                    toolCall.arguments
-                ).onSuccess { tool ->
-                    terminal.println(TextColors.blue(tool.toString()))
-                }.onFailure {
-                    terminal.println(TextColors.blue(toolCall.toString()))
-                }.flatMap { tool ->
-                    tool()
-                }
+                val result = toolService.resolve(toolCall)
+                    .onSuccess { tool ->
+                        terminal.println(TextColors.blue(tool.toString()))
+                    }.onFailure {
+                        terminal.println(TextColors.blue(toolCall.toString()))
+                    }.flatMap { tool ->
+                        tool.invoke()
+                    }
 
                 val content = result.fold(
-                    onSuccess = {
-                        it
-                    },
+                    onSuccess = { it },
                     onFailure = {
                         it.message.orEmpty()
                     }
@@ -93,6 +90,7 @@ class Chat : CliktCommand(name = "chat"), KoinComponent {
                             }
                     }
                 )
+
                 toolCall = null
             } else {
                 val input = terminal.prompt(prompt = ">", promptSuffix = " ") ?: break
@@ -135,8 +133,12 @@ class Chat : CliktCommand(name = "chat"), KoinComponent {
                         responseBuilder.append(message.content)
                     }
 
-                    is MessagePart.ToolCall -> {
-                        toolCall = message
+                    is MessagePart.Tooling -> {
+                        toolCall = ToolCall(
+                            name = message.name,
+                            arguments = message.arguments,
+                        )
+
                         terminal.println()
                     }
                 }
@@ -151,13 +153,4 @@ class Chat : CliktCommand(name = "chat"), KoinComponent {
             }
         }
     }
-}
-
-private inline fun <T, R> Result<T>.flatMap(block: (T) -> Result<R>): Result<R> {
-    return fold(
-        onSuccess = block,
-        onFailure = {
-            Result.failure(it)
-        }
-    )
 }
