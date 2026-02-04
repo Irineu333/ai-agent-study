@@ -28,11 +28,22 @@ class EditToolExecution(
         }
 
         val oldContent = path.readText()
+        val occurrences = oldContent.windowed(oldString.length) { it.toString() }.count { it == oldString }
 
-        if (!oldContent.contains(oldString)) {
-            return Result.failure(
-                Exception("String not found in file: '${oldString.take(50)}${if (oldString.length > 50) "..." else ""}'")
-            )
+        when {
+            occurrences == 0 -> {
+                val preview = oldString.take(50) + if (oldString.length > 50) "..." else ""
+                return Result.failure(Exception("String not found in file: '$preview'"))
+            }
+
+            occurrences > 1 && !replaceAll -> {
+                return Result.failure(
+                    Exception(
+                        "Found $occurrences occurrences of the string. " +
+                                "Provide more surrounding context to make it unique, or use replace_all=true"
+                    )
+                )
+            }
         }
 
         val newContent = if (replaceAll) {
