@@ -1,7 +1,8 @@
 package com.neoutils.agent.tool.filesystem
 
-import com.github.ajalt.mordant.rendering.TextColors.*
 import com.github.ajalt.mordant.rendering.TextColors.Companion.gray
+import com.github.ajalt.mordant.rendering.TextColors.green
+import com.github.ajalt.mordant.rendering.TextColors.red
 import com.github.difflib.DiffUtils
 import com.github.difflib.UnifiedDiffUtils
 import com.neoutils.agent.core.domain.tool.ToolExecution
@@ -30,20 +31,19 @@ class EditToolExecution(
         val oldContent = path.readText()
         val occurrences = oldContent.windowed(oldString.length) { it.toString() }.count { it == oldString }
 
-        when {
-            occurrences == 0 -> {
-                val preview = oldString.take(50) + if (oldString.length > 50) "..." else ""
-                return Result.failure(Exception("String not found in file: '$preview'"))
-            }
 
-            occurrences > 1 && !replaceAll -> {
-                return Result.failure(
-                    Exception(
-                        "Found $occurrences occurrences of the string. " +
-                                "Provide more surrounding context to make it unique, or use replace_all=true"
-                    )
+        if (occurrences == 0) {
+            val preview = oldString.take(50) + if (oldString.length > 50) "..." else ""
+            return Result.failure(Exception("String not found in file: '$preview'"))
+        }
+
+        if (occurrences > 1 && !replaceAll) {
+            return Result.failure(
+                Exception(
+                    "Found $occurrences occurrences of the string. " +
+                            "Provide more surrounding context to make it unique, or use replace_all=true"
                 )
-            }
+            )
         }
 
         val newContent = if (replaceAll) {
