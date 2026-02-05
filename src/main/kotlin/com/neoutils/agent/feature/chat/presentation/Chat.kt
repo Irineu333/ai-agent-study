@@ -1,17 +1,11 @@
 package com.neoutils.agent.feature.chat.presentation
 
-import com.github.ajalt.clikt.core.CliktCommand
-import com.github.ajalt.clikt.core.terminal
-import com.github.ajalt.clikt.parameters.options.option
-import com.github.ajalt.clikt.parameters.options.required
-import com.github.ajalt.mordant.rendering.TextColors
-import com.github.ajalt.mordant.table.verticalLayout
-import com.github.ajalt.mordant.terminal.prompt
 import com.neoutils.agent.core.domain.extension.flatMap
 import com.neoutils.agent.core.domain.model.MessagePart
 import com.neoutils.agent.core.domain.model.ToolCall
 import com.neoutils.agent.core.domain.service.ToolService
-import com.neoutils.agent.core.presentation.loading
+import com.neoutils.agent.core.presentation.TerminalUI
+import com.neoutils.agent.core.presentation.TextColors
 import com.neoutils.agent.feature.chat.domain.SYSTEM_PROMPT
 import com.neoutils.agent.feature.chat.domain.model.ChatMessage
 import com.neoutils.agent.feature.chat.domain.model.ChatMessage.Role
@@ -21,14 +15,15 @@ import kotlinx.coroutines.runBlocking
 import org.koin.core.component.KoinComponent
 import org.koin.core.component.inject
 
-class Chat : CliktCommand(name = "chat"), KoinComponent {
+class Chat(
+    private val terminal: TerminalUI,
+    private val model: String
+) : KoinComponent {
 
     private val repository: ChatRepository by inject()
     private val toolService: ToolService by inject()
 
-    private val model by option("--model", "-m").required()
-
-    override fun run() = runBlocking {
+    fun run() = runBlocking {
 
         val history = mutableListOf(ChatMessage(Role.System, SYSTEM_PROMPT))
 
@@ -46,9 +41,9 @@ class Chat : CliktCommand(name = "chat"), KoinComponent {
 
                 val result = toolService.resolve(toolCall)
                     .onSuccess { tool ->
-                        terminal.println(TextColors.blue(tool.toString()))
+                        terminal.println(tool.toString(), TextColors.blue)
                     }.onFailure {
-                        terminal.println(TextColors.blue(toolCall.toString()))
+                        terminal.println(toolCall.toString(), TextColors.blue)
                     }.flatMap { tool ->
                         tool.invoke()
                     }
@@ -67,33 +62,22 @@ class Chat : CliktCommand(name = "chat"), KoinComponent {
                     )
                 )
 
-                val contentStyle = result.fold(
-                    onSuccess = {
-                        TextColors.gray(0.4)
-                    },
-                    onFailure = {
-                        TextColors.red
-                    }
+                val contentColor = result.fold(
+                    onSuccess = { TextColors.gray(0.4f) },
+                    onFailure = { TextColors.red }
                 )
 
-                terminal.println(
-                    verticalLayout {
-                        content
-                            .trim()
-                            .lines()
-                            .forEachIndexed { index, line ->
-                                if (index == 0) {
-                                    cell(contentStyle("L $line"))
-                                } else {
-                                    cell(contentStyle("  $line"))
-                                }
-                            }
+                content.trim().lines().forEachIndexed { index, line ->
+                    if (index == 0) {
+                        terminal.println("L $line", contentColor)
+                    } else {
+                        terminal.println("  $line", contentColor)
                     }
-                )
+                }
 
                 toolCall = null
             } else {
-                val input = terminal.prompt(prompt = ">", promptSuffix = " ") ?: break
+                val input = terminal.prompt("> ") ?: break
 
                 if (input.isEmpty()) continue
 
@@ -119,13 +103,14 @@ class Chat : CliktCommand(name = "chat"), KoinComponent {
                             terminal.println()
                             isThinking = true
                         }
-                        terminal.print(TextColors.gray(0.6)(message.content))
+                        terminal.print(message.content, TextColors.gray(0.6f))
                         thinkingBuilder.append(message.content)
                     }
 
                     is MessagePart.Response -> {
                         if (isThinking) {
-                            terminal.println("\n")
+                            terminal.println()
+                            terminal.println()
                             isThinking = false
                         }
 

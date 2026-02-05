@@ -1,7 +1,5 @@
 package com.neoutils.agent.tool.filesystem
 
-import com.github.ajalt.mordant.rendering.TextColors.*
-import com.github.ajalt.mordant.rendering.TextColors.Companion.gray
 import com.github.difflib.DiffUtils
 import com.github.difflib.UnifiedDiffUtils
 import com.neoutils.agent.core.domain.tool.ToolExecution
@@ -60,9 +58,9 @@ class WriteToolExecution(
         )
         return unifiedDiff.drop(2).joinToString("\n") { line ->
             when {
-                line.startsWith("@@") -> gray(0.5)(line)
-                line.startsWith("-") -> red(line)
-                line.startsWith("+") -> green(line)
+                line.startsWith("@@") -> "\u001B[90m$line\u001B[0m"
+                line.startsWith("-") -> "\u001B[31m$line\u001B[0m"
+                line.startsWith("+") -> "\u001B[32m$line\u001B[0m"
                 else -> line
             }
         }.ifEmpty { "No changes" }

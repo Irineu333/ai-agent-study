@@ -14,11 +14,8 @@ repositories {
 }
 
 dependencies {
-    // mordant
-    implementation("com.github.ajalt.mordant:mordant-coroutines:3.0.2")
-
-    // clikt
-    implementation("com.github.ajalt.clikt:clikt:5.0.2")
+    // Lanterna TUI
+    implementation("com.googlecode.lanterna:lanterna:3.1.3")
 
     // Ktor client for HTTP requests
     implementation("io.ktor:ktor-client-core:3.0.3")
